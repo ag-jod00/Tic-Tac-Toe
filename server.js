@@ -10,7 +10,7 @@ const io = new Server(server, {
   },
 });
 
-const PORT = process.env.PORT || 3000; // Use Render's provided port
+const PORT = process.env.PORT || 10000;  // Use Render's assigned port
 
 io.on("connection", (socket) => {
   console.log("A user connected");
