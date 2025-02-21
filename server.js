@@ -15,12 +15,17 @@ const rooms = {};
 // Serve static files (HTML, CSS, JS)
 app.use(express.static(path.join(__dirname)));
 
-// Serve the main game page
+// 🚀 FIX: Serve `index01.html` when opening the main URL `/`
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "index01.html"));
+});
+
+// Serve `/game` to directly open the game page
 app.get("/game", (req, res) => {
     res.sendFile(path.join(__dirname, "index01.html"));
 });
 
-// Socket.io connection
+// Handle Socket.io connections
 io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
