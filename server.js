@@ -1,66 +1,69 @@
 const express = require("express");
 const http = require("http");
-const { Server } = require("socket.io");
 const path = require("path");
+const socketIo = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = socketIo(server);
 
-// Store rooms and players
+const PORT = process.env.PORT || 3000;
+
+// Store active rooms and their players
 const rooms = {};
 
-// Serve static files (Ensure all HTML, CSS, and JS are in the same directory)
-app.use(express.static(__dirname));
+// Serve static files (HTML, CSS, JS)
+app.use(express.static(path.join(__dirname)));
 
-// Serve index06.html when accessing the root "/"
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "index06.html"));
+// Serve the main game page
+app.get("/game", (req, res) => {
+    res.sendFile(path.join(__dirname, "index01.html"));
 });
 
-// Handle Socket.IO connections
+// Socket.io connection
 io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-    // Create room and generate code
+    // Handle room creation
     socket.on("createRoom", () => {
-        const roomCode = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit code
-        rooms[roomCode] = { players: [] };
+        let roomCode = Math.floor(100000 + Math.random() * 900000).toString();
+        rooms[roomCode] = { players: [socket.id] };
         socket.join(roomCode);
-        rooms[roomCode].players.push(socket.id);
         socket.emit("roomCreated", roomCode);
-        console.log(`Room ${roomCode} created by ${socket.id}`);
+        console.log(`Room ${roomCode} created.`);
     });
 
-    // Join an existing room
+    // Handle room joining
     socket.on("joinRoom", (roomCode) => {
         if (rooms[roomCode] && rooms[roomCode].players.length < 2) {
-            socket.join(roomCode);
             rooms[roomCode].players.push(socket.id);
+            socket.join(roomCode);
             io.to(roomCode).emit("roomJoined", roomCode);
-            console.log(`Player ${socket.id} joined Room ${roomCode}`);
+            console.log(`Player joined room ${roomCode}`);
         } else {
             socket.emit("roomFullOrInvalid");
         }
     });
 
     // Handle player moves
-    socket.on("playerMove", ({ roomCode, index }) => {
-        socket.to(roomCode).emit("updateGame", index);
+    socket.on("makeMove", ({ roomCode, cellIndex, player }) => {
+        io.to(roomCode).emit("moveMade", { cellIndex, player });
     });
 
-    // Handle player disconnecting
+    // Handle player disconnection
     socket.on("disconnect", () => {
-        for (const room in rooms) {
+        console.log("User disconnected:", socket.id);
+        for (let room in rooms) {
             rooms[room].players = rooms[room].players.filter((id) => id !== socket.id);
             if (rooms[room].players.length === 0) {
                 delete rooms[room];
-                console.log(`Room ${room} deleted`);
+                console.log(`Room ${room} deleted.`);
             }
         }
-        console.log("User disconnected:", socket.id);
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// Start the server
+server.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
