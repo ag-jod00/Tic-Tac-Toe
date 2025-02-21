@@ -1,10 +1,9 @@
 const socket = io();
 
-document.getElementById("generateBtn").addEventListener("click", () => {
+document.getElementById("createRoomBtn").addEventListener("click", () => {
     socket.emit("createRoom");
 });
 
-socket.on("roomCreated", (roomId) => {
-    console.log("Room created successfully:", roomId);
-    document.getElementById("roomCodeDisplay").innerText = roomId;
+socket.on("roomCreated", (roomCode) => {
+    document.getElementById("roomCode").innerText = `Room Code: ${roomCode}`;
 });
