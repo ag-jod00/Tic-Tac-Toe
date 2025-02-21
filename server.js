@@ -1,17 +1,25 @@
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
 const app = express();
-const path = require("path");
-
-// Serve static files from the same folder
-app.use(express.static(__dirname));
-
-// Route to serve the main HTML file
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "index01.html"));
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",  // Allow connections from anywhere
+  },
 });
 
-// Start the server
-const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+const PORT = process.env.PORT || 3000; // Use Render's provided port
+
+io.on("connection", (socket) => {
+  console.log("A user connected");
+
+  socket.on("disconnect", () => {
+    console.log("A user disconnected");
+  });
+});
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
