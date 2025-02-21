@@ -1,21 +1,19 @@
 document.addEventListener("DOMContentLoaded", () => {
     console.log("DOM fully loaded");
 
-    // Initialize Socket.IO
-    const socket = io();
+    const socket = io(); // Initialize Socket.IO connection
 
-    // Select elements
+    // Ensure elements exist
     const joinButton = document.getElementById("joinRoomButton");
     const roomCodeInput = document.getElementById("roomCodeInput");
 
-    // Ensure elements exist before adding event listeners
-    if (joinButton && roomCodeInput) {
-        joinButton.addEventListener("click", joinRoom);
-    } else {
-        console.error("Error: Elements not found!");
+    if (!joinButton || !roomCodeInput) {
+        console.error("Error: joinRoomButton or roomCodeInput not found!");
+        return;
     }
 
-    function joinRoom() {
+    // Attach event listener
+    joinButton.addEventListener("click", () => {
         const roomCode = roomCodeInput.value.trim();
         if (roomCode.length === 6) {
             console.log(`Attempting to join room: ${roomCode}`);
@@ -23,14 +21,16 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             alert("Please enter a valid 6-digit room code.");
         }
-    }
-
-    // Listen for server response
-    socket.on("roomJoined", (data) => {
-        console.log(`Joined room: ${data.roomCode}`);
     });
 
-    socket.on("roomJoinError", (error) => {
-        alert(error.message);
+    // Listen for successful room join
+    socket.on("roomJoined", (data) => {
+        alert(`Joined Room: ${data.roomCode}`);
+        window.location.href = "index03.html"; // Redirect to game board
+    });
+
+    // Handle room full or invalid error
+    socket.on("roomFullOrInvalid", () => {
+        alert("Room is full or does not exist!");
     });
 });
