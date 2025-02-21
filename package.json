@@ -1,17 +1,17 @@
 {
   "name": "tic-tac-toe",
   "version": "1.0.0",
-  "main": "script01.js",
+  "description": "A multi-page website with separate CSS and JS files",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
-    "express": "^4.21.2",
-    "socket.io": "^4.8.1"
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
   }
 }
