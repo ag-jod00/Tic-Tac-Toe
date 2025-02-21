@@ -6,13 +6,18 @@
     <title>Join Room</title>
     <script src="/socket.io/socket.io.js"></script>
     <script defer src="script06.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; background: #f4c842; }
+        .container { margin-top: 100px; padding: 20px; background: white; border-radius: 10px; display: inline-block; }
+        input { padding: 10px; font-size: 18px; width: 100px; }
+        button { padding: 10px 20px; font-size: 18px; cursor: pointer; }
+    </style>
 </head>
 <body>
     <div class="container">
         <h2>Join Room</h2>
-        <input type="text" id="roomCodeInput" placeholder="Enter room code">
-        <button id="joinBtn">Join</button>
+        <input type="text" id="roomInput" placeholder="Room Code">
+        <button id="joinRoomBtn">Join</button>
     </div>
 </body>
 </html>
