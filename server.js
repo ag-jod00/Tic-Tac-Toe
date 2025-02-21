@@ -7,69 +7,69 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
+const rooms = {}; // Store rooms and players
 
-// Store active rooms
-const rooms = {};
+app.use(express.static(__dirname)); // Serve files from the same directory
 
-app.use(express.static(__dirname)); // Serve static files from current directory
-
-// Default route (should load index01.html)
-app.get("/", (req, res) => {
-    res.sendFile(__dirname + "/index01.html");
-});
-
-// Socket.io Connection
 io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-    // Handle room creation
+    // Create a new room
     socket.on("createRoom", () => {
         let roomId = Math.floor(100000 + Math.random() * 900000).toString();
-        rooms[roomId] = { players: [socket.id] }; // Store room with first player
+        rooms[roomId] = { players: [socket.id], board: Array(9).fill(null) };
+
+        console.log(`Room ${roomId} created by ${socket.id}`);
         socket.join(roomId);
-        console.log(`Room Created: ${roomId} by ${socket.id}`);
         socket.emit("roomCreated", roomId);
     });
 
-    // Handle joining room
+    // Join an existing room
     socket.on("joinRoom", (roomId) => {
-        console.log(`Player ${socket.id} trying to join Room: ${roomId}`);
-        
-        if (rooms[roomId] && rooms[roomId].players.length < 2) {
-            rooms[roomId].players.push(socket.id);
-            socket.join(roomId);
-            console.log(`Player ${socket.id} joined Room: ${roomId}`);
-            socket.emit("roomJoined", roomId);
-            io.to(roomId).emit("startGame", roomId);
-        } else {
-            console.log(`Room ${roomId} is invalid or full`);
-            socket.emit("invalidRoom");
+        console.log(`Join request for room: ${roomId}`);
+
+        if (!rooms[roomId]) {
+            console.log(`Room ${roomId} does NOT exist.`);
+            socket.emit("roomError", "Room does not exist!");
+            return;
         }
+
+        if (rooms[roomId].players.length >= 2) {
+            console.log(`Room ${roomId} is full.`);
+            socket.emit("roomError", "Room is full!");
+            return;
+        }
+
+        rooms[roomId].players.push(socket.id);
+        socket.join(roomId);
+        socket.emit("roomJoined", roomId);
+        console.log(`Player ${socket.id} joined room: ${roomId}`);
+
+        // Notify both players the game is starting
+        io.to(roomId).emit("startGame", rooms[roomId].players);
     });
 
     // Handle player moves
-    socket.on("makeMove", ({ roomId, cellIndex }) => {
-        console.log(`Move in Room ${roomId} by ${socket.id} at Cell ${cellIndex}`);
-        io.to(roomId).emit("updateBoard", { cellIndex, playerId: socket.id });
+    socket.on("makeMove", ({ roomId, index, symbol }) => {
+        if (rooms[roomId]) {
+            rooms[roomId].board[index] = symbol;
+            io.to(roomId).emit("updateBoard", { index, symbol });
+        }
     });
 
-    // Handle disconnection
+    // Disconnect handling
     socket.on("disconnect", () => {
-        console.log(`User ${socket.id} disconnected`);
-        
-        // Remove player from rooms
-        for (let roomId in rooms) {
-            let index = rooms[roomId].players.indexOf(socket.id);
-            if (index !== -1) {
-                rooms[roomId].players.splice(index, 1);
-                console.log(`User ${socket.id} removed from Room: ${roomId}`);
-                if (rooms[roomId].players.length === 0) delete rooms[roomId]; // Delete empty rooms
+        console.log(`User disconnected: ${socket.id}`);
+        for (const roomId in rooms) {
+            rooms[roomId].players = rooms[roomId].players.filter(id => id !== socket.id);
+
+            if (rooms[roomId].players.length === 0) {
+                delete rooms[roomId]; // Delete empty room
             }
         }
     });
 });
 
-// Start server
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
