@@ -1,74 +1,75 @@
 const express = require("express");
 const http = require("http");
-const path = require("path");
-const socketIo = require("socket.io");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
-// Store active rooms and their players
+// Store active rooms
 const rooms = {};
 
-// Serve static files (HTML, CSS, JS)
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(__dirname)); // Serve static files from current directory
 
-// 🚀 FIX: Serve `index01.html` when opening the main URL `/`
+// Default route (should load index01.html)
 app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "index01.html"));
+    res.sendFile(__dirname + "/index01.html");
 });
 
-// Serve `/game` to directly open the game page
-app.get("/game", (req, res) => {
-    res.sendFile(path.join(__dirname, "index01.html"));
-});
-
-// Handle Socket.io connections
+// Socket.io Connection
 io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
     // Handle room creation
     socket.on("createRoom", () => {
-        let roomCode = Math.floor(100000 + Math.random() * 900000).toString();
-        rooms[roomCode] = { players: [socket.id] };
-        socket.join(roomCode);
-        socket.emit("roomCreated", roomCode);
-        console.log(`Room ${roomCode} created.`);
+        let roomId = Math.floor(100000 + Math.random() * 900000).toString();
+        rooms[roomId] = { players: [socket.id] }; // Store room with first player
+        socket.join(roomId);
+        console.log(`Room Created: ${roomId} by ${socket.id}`);
+        socket.emit("roomCreated", roomId);
     });
 
-    // Handle room joining
-    socket.on("joinRoom", (roomCode) => {
-        if (rooms[roomCode] && rooms[roomCode].players.length < 2) {
-            rooms[roomCode].players.push(socket.id);
-            socket.join(roomCode);
-            io.to(roomCode).emit("roomJoined", roomCode);
-            console.log(`Player joined room ${roomCode}`);
+    // Handle joining room
+    socket.on("joinRoom", (roomId) => {
+        console.log(`Player ${socket.id} trying to join Room: ${roomId}`);
+        
+        if (rooms[roomId] && rooms[roomId].players.length < 2) {
+            rooms[roomId].players.push(socket.id);
+            socket.join(roomId);
+            console.log(`Player ${socket.id} joined Room: ${roomId}`);
+            socket.emit("roomJoined", roomId);
+            io.to(roomId).emit("startGame", roomId);
         } else {
-            socket.emit("roomFullOrInvalid");
+            console.log(`Room ${roomId} is invalid or full`);
+            socket.emit("invalidRoom");
         }
     });
 
     // Handle player moves
-    socket.on("makeMove", ({ roomCode, cellIndex, player }) => {
-        io.to(roomCode).emit("moveMade", { cellIndex, player });
+    socket.on("makeMove", ({ roomId, cellIndex }) => {
+        console.log(`Move in Room ${roomId} by ${socket.id} at Cell ${cellIndex}`);
+        io.to(roomId).emit("updateBoard", { cellIndex, playerId: socket.id });
     });
 
-    // Handle player disconnection
+    // Handle disconnection
     socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
-        for (let room in rooms) {
-            rooms[room].players = rooms[room].players.filter((id) => id !== socket.id);
-            if (rooms[room].players.length === 0) {
-                delete rooms[room];
-                console.log(`Room ${room} deleted.`);
+        console.log(`User ${socket.id} disconnected`);
+        
+        // Remove player from rooms
+        for (let roomId in rooms) {
+            let index = rooms[roomId].players.indexOf(socket.id);
+            if (index !== -1) {
+                rooms[roomId].players.splice(index, 1);
+                console.log(`User ${socket.id} removed from Room: ${roomId}`);
+                if (rooms[roomId].players.length === 0) delete rooms[roomId]; // Delete empty rooms
             }
         }
     });
 });
 
-// Start the server
+// Start server
 server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
