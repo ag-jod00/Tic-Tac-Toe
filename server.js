@@ -9,12 +9,12 @@ const io = new Server(server);
 
 const rooms = {}; // Store active rooms
 
-// Set `index01.html` as the home page
+// ✅ **Force `index01.html` to be the homepage**
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index01.html'));
 });
 
-// Serve other static files
+// ✅ **Serve ALL static files (HTML, CSS, JS) from the current directory**
 app.use(express.static(__dirname));
 
 io.on('connection', (socket) => {
