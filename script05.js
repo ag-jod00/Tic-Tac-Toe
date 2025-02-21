@@ -1,17 +1,30 @@
-const socket = io(); // Initialize Socket.IO connection
-
-function generateCode() {
-    let roomCode = Math.floor(100000 + Math.random() * 900000); // Generate 6-digit room code
-    document.getElementById("roomCode").innerText = roomCode;
-    socket.emit("createRoom", roomCode); // Emit room creation to server
-}
-
-// Wait for DOM to load before adding event listener
 document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("generateBtn").addEventListener("click", generateCode);
-});
+    console.log("DOM fully loaded and parsed");
 
-// Listen for successful room creation
-socket.on("roomCreated", (roomCode) => {
-    alert(`Room Created: ${roomCode}`);
+    // Initialize Socket.IO
+    const socket = io(); // Ensure this works properly with your backend
+
+    // Selecting the button
+    const button = document.getElementById("generateCodeButton");
+    const codeDisplay = document.getElementById("roomCode");
+
+    if (button && codeDisplay) {
+        button.addEventListener("click", generateCode);
+    } else {
+        console.error("Error: Elements not found!");
+    }
+
+    // Function to generate a random room code and send it to the server
+    function generateCode() {
+        const roomCode = Math.floor(100000 + Math.random() * 900000); // Generates a 6-digit random code
+        codeDisplay.innerText = roomCode;
+
+        // Emit room code to the server
+        socket.emit("createRoom", { roomCode });
+    }
+
+    // Listening for confirmation from server
+    socket.on("roomCreated", (data) => {
+        console.log(`Room ${data.roomCode} created successfully.`);
+    });
 });
