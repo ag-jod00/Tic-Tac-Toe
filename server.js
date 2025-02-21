@@ -1,67 +1,72 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Serve static files (CSS, JS, HTML)
-app.use(express.static(__dirname));
+const rooms = {}; // Stores room codes and their players
 
-let rooms = {}; // Stores active game rooms
+app.use(express.static(__dirname)); // Serve static files
 
-// Routes for each HTML page
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index01.html")));
-app.get("/page2", (req, res) => res.sendFile(path.join(__dirname, "index02.html")));
-app.get("/page3", (req, res) => res.sendFile(path.join(__dirname, "index03.html")));
-app.get("/page4", (req, res) => res.sendFile(path.join(__dirname, "index04.html")));
-app.get("/page5", (req, res) => res.sendFile(path.join(__dirname, "index05.html")));
-app.get("/page6", (req, res) => res.sendFile(path.join(__dirname, "index06.html")));
-
-// Socket.IO Connection Handling
 io.on("connection", (socket) => {
-    console.log(`A user connected: ${socket.id}`);
+    console.log(`New connection: ${socket.id}`);
 
-    // Create a room
+    // Handle room creation
     socket.on("createRoom", () => {
-        let roomCode = Math.random().toString(36).substring(2, 8).toUpperCase(); // Generate a random 6-character room code
-        rooms[roomCode] = { players: [socket.id] };
-        socket.join(roomCode);
+        const roomCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
+        rooms[roomCode] = { players: [] }; // Initialize room
         socket.emit("roomCreated", roomCode);
-        console.log(`Room ${roomCode} created by ${socket.id}`);
+        console.log(`Room created: ${roomCode}`);
     });
 
-    // Join a room
+    // Handle joining a room
     socket.on("joinRoom", (roomCode) => {
-        if (rooms[roomCode] && rooms[roomCode].players.length < 2) {
-            rooms[roomCode].players.push(socket.id);
-            socket.join(roomCode);
-            io.to(roomCode).emit("roomJoined", roomCode);
-            console.log(`Player ${socket.id} joined Room ${roomCode}`);
-        } else {
+        console.log(`Join request for room: ${roomCode} from ${socket.id}`);
+
+        if (!rooms[roomCode]) {
+            console.log("Room not found!");
             socket.emit("roomFullOrInvalid");
+            return;
+        }
+
+        if (rooms[roomCode].players.length >= 2) {
+            console.log("Room is full!");
+            socket.emit("roomFullOrInvalid");
+            return;
+        }
+
+        rooms[roomCode].players.push(socket.id);
+        socket.join(roomCode);
+        socket.emit("roomJoined", roomCode);
+        console.log(`Player joined room: ${roomCode}`);
+
+        // If 2 players are in the room, start the game
+        if (rooms[roomCode].players.length === 2) {
+            io.to(roomCode).emit("gameStart");
+            console.log(`Game started in room: ${roomCode}`);
         }
     });
 
     // Handle game moves
-    socket.on("move", ({ roomCode, index, player }) => {
-        io.to(roomCode).emit("updateBoard", { index, player });
+    socket.on("makeMove", ({ roomCode, cellIndex, symbol }) => {
+        console.log(`Move in room ${roomCode}: Cell ${cellIndex}, Symbol: ${symbol}`);
+        io.to(roomCode).emit("moveMade", { cellIndex, symbol });
     });
 
-    // Disconnect event
+    // Handle disconnects
     socket.on("disconnect", () => {
-        console.log(`User disconnected: ${socket.id}`);
+        console.log(`Player disconnected: ${socket.id}`);
         for (const roomCode in rooms) {
-            rooms[roomCode].players = rooms[roomCode].players.filter((id) => id !== socket.id);
-            if (rooms[roomCode].players.length === 0) delete rooms[roomCode];
+            rooms[roomCode].players = rooms[roomCode].players.filter(id => id !== socket.id);
+            if (rooms[roomCode].players.length === 0) {
+                delete rooms[roomCode]; // Remove empty rooms
+                console.log(`Room ${roomCode} deleted`);
+            }
         }
     });
 });
 
-// Start server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
