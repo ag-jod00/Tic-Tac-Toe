@@ -9,9 +9,11 @@
 <body>
     <div class="container">
         <h2>Generate Room Code</h2>
-        <button onclick="generateCode()">Generate Code</button>
+        <button id="generateCodeButton">Generate Code</button>
         <p class="room-code" id="roomCode">----</p>
     </div>
+
+    <!-- Ensure the script order: Socket.IO first, then script05.js -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="script05.js"></script>
 </body>
