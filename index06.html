@@ -4,19 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Join Room</title>
-    <link rel="stylesheet" href="style06.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script defer src="script06.js"></script>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <h2>Join Room</h2>
-        <p>Enter the room code to join:</p>
-        <input type="text" id="roomCodeInput" placeholder="Enter room code" maxlength="6">
-        <br>
-        <button id="joinRoomButton">Join</button>
+        <input type="text" id="roomCodeInput" placeholder="Enter room code">
+        <button id="joinBtn">Join</button>
     </div>
-
-    <!-- Include Socket.IO and main script -->
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="script06.js"></script>
 </body>
 </html>
