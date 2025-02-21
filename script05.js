@@ -1,4 +1,12 @@
+const socket = io(); // Connect to the server
+
 function generateCode() {
-    let code = Math.floor(100000 + Math.random() * 900000); // Generates a 6-digit code
-    document.getElementById("roomCode").innerText = code;
+    socket.emit("createRoom"); // Ask the server to create a room
 }
+
+// Listen for the generated room code from the server
+socket.on("roomCreated", (roomCode) => {
+    document.getElementById("roomCode").innerText = `Room Code: ${roomCode}`;
+    alert(`Room created! Share this code: ${roomCode}`);
+});
+
