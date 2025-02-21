@@ -1,72 +1,66 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const rooms = {}; // Stores room codes and their players
+// Store rooms and players
+const rooms = {};
 
-app.use(express.static(__dirname)); // Serve static files
+// Serve static files (Ensure all HTML, CSS, and JS are in the same directory)
+app.use(express.static(__dirname));
 
+// Serve index06.html when accessing the root "/"
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "index06.html"));
+});
+
+// Handle Socket.IO connections
 io.on("connection", (socket) => {
-    console.log(`New connection: ${socket.id}`);
+    console.log("A user connected:", socket.id);
 
-    // Handle room creation
+    // Create room and generate code
     socket.on("createRoom", () => {
-        const roomCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
-        rooms[roomCode] = { players: [] }; // Initialize room
-        socket.emit("roomCreated", roomCode);
-        console.log(`Room created: ${roomCode}`);
-    });
-
-    // Handle joining a room
-    socket.on("joinRoom", (roomCode) => {
-        console.log(`Join request for room: ${roomCode} from ${socket.id}`);
-
-        if (!rooms[roomCode]) {
-            console.log("Room not found!");
-            socket.emit("roomFullOrInvalid");
-            return;
-        }
-
-        if (rooms[roomCode].players.length >= 2) {
-            console.log("Room is full!");
-            socket.emit("roomFullOrInvalid");
-            return;
-        }
-
-        rooms[roomCode].players.push(socket.id);
+        const roomCode = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit code
+        rooms[roomCode] = { players: [] };
         socket.join(roomCode);
-        socket.emit("roomJoined", roomCode);
-        console.log(`Player joined room: ${roomCode}`);
+        rooms[roomCode].players.push(socket.id);
+        socket.emit("roomCreated", roomCode);
+        console.log(`Room ${roomCode} created by ${socket.id}`);
+    });
 
-        // If 2 players are in the room, start the game
-        if (rooms[roomCode].players.length === 2) {
-            io.to(roomCode).emit("gameStart");
-            console.log(`Game started in room: ${roomCode}`);
+    // Join an existing room
+    socket.on("joinRoom", (roomCode) => {
+        if (rooms[roomCode] && rooms[roomCode].players.length < 2) {
+            socket.join(roomCode);
+            rooms[roomCode].players.push(socket.id);
+            io.to(roomCode).emit("roomJoined", roomCode);
+            console.log(`Player ${socket.id} joined Room ${roomCode}`);
+        } else {
+            socket.emit("roomFullOrInvalid");
         }
     });
 
-    // Handle game moves
-    socket.on("makeMove", ({ roomCode, cellIndex, symbol }) => {
-        console.log(`Move in room ${roomCode}: Cell ${cellIndex}, Symbol: ${symbol}`);
-        io.to(roomCode).emit("moveMade", { cellIndex, symbol });
+    // Handle player moves
+    socket.on("playerMove", ({ roomCode, index }) => {
+        socket.to(roomCode).emit("updateGame", index);
     });
 
-    // Handle disconnects
+    // Handle player disconnecting
     socket.on("disconnect", () => {
-        console.log(`Player disconnected: ${socket.id}`);
-        for (const roomCode in rooms) {
-            rooms[roomCode].players = rooms[roomCode].players.filter(id => id !== socket.id);
-            if (rooms[roomCode].players.length === 0) {
-                delete rooms[roomCode]; // Remove empty rooms
-                console.log(`Room ${roomCode} deleted`);
+        for (const room in rooms) {
+            rooms[room].players = rooms[room].players.filter((id) => id !== socket.id);
+            if (rooms[room].players.length === 0) {
+                delete rooms[room];
+                console.log(`Room ${room} deleted`);
             }
         }
+        console.log("User disconnected:", socket.id);
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
