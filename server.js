@@ -1,75 +1,69 @@
 const express = require("express");
 const http = require("http");
-const { Server } = require("socket.io");
+const socketIo = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = socketIo(server);
 
-const PORT = process.env.PORT || 3000;
-const rooms = {}; // Store rooms and players
+const rooms = {}; // Stores active rooms and players
 
-app.use(express.static(__dirname)); // Serve files from the same directory
+app.use(express.static(__dirname)); // Serve static files from project folder
+
+// Serve the main room creation page on root
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "index05.html"));
+});
 
 io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-    // Create a new room
     socket.on("createRoom", () => {
-        let roomId = Math.floor(100000 + Math.random() * 900000).toString();
-        rooms[roomId] = { players: [socket.id], board: Array(9).fill(null) };
+        const roomCode = Math.floor(100000 + Math.random() * 900000).toString();
+        rooms[roomCode] = { players: [socket.id], board: ["", "", "", "", "", "", "", "", ""] };
 
-        console.log(`Room ${roomId} created by ${socket.id}`);
-        socket.join(roomId);
-        socket.emit("roomCreated", roomId);
+        socket.join(roomCode);
+        socket.emit("roomCreated", roomCode);
+        console.log(`Room ${roomCode} created by ${socket.id}`);
     });
 
-    // Join an existing room
-    socket.on("joinRoom", (roomId) => {
-        console.log(`Join request for room: ${roomId}`);
-
-        if (!rooms[roomId]) {
-            console.log(`Room ${roomId} does NOT exist.`);
-            socket.emit("roomError", "Room does not exist!");
-            return;
-        }
-
-        if (rooms[roomId].players.length >= 2) {
-            console.log(`Room ${roomId} is full.`);
-            socket.emit("roomError", "Room is full!");
-            return;
-        }
-
-        rooms[roomId].players.push(socket.id);
-        socket.join(roomId);
-        socket.emit("roomJoined", roomId);
-        console.log(`Player ${socket.id} joined room: ${roomId}`);
-
-        // Notify both players the game is starting
-        io.to(roomId).emit("startGame", rooms[roomId].players);
-    });
-
-    // Handle player moves
-    socket.on("makeMove", ({ roomId, index, symbol }) => {
-        if (rooms[roomId]) {
-            rooms[roomId].board[index] = symbol;
-            io.to(roomId).emit("updateBoard", { index, symbol });
+    socket.on("joinRoom", (roomCode) => {
+        if (rooms[roomCode] && rooms[roomCode].players.length < 2) {
+            rooms[roomCode].players.push(socket.id);
+            socket.join(roomCode);
+            socket.emit("roomJoined", roomCode);
+            io.to(roomCode).emit("startGame", rooms[roomCode].players);
+            console.log(`Player ${socket.id} joined room ${roomCode}`);
+        } else {
+            socket.emit("roomError", "Room is full or does not exist!");
         }
     });
 
-    // Disconnect handling
+    socket.on("makeMove", ({ roomCode, index, symbol }) => {
+        if (rooms[roomCode]) {
+            rooms[roomCode].board[index] = symbol;
+            io.to(roomCode).emit("updateBoard", rooms[roomCode].board);
+        }
+    });
+
     socket.on("disconnect", () => {
-        console.log(`User disconnected: ${socket.id}`);
-        for (const roomId in rooms) {
-            rooms[roomId].players = rooms[roomId].players.filter(id => id !== socket.id);
-
-            if (rooms[roomId].players.length === 0) {
-                delete rooms[roomId]; // Delete empty room
+        for (const roomCode in rooms) {
+            const players = rooms[roomCode].players;
+            if (players.includes(socket.id)) {
+                rooms[roomCode].players = players.filter((id) => id !== socket.id);
+                if (rooms[roomCode].players.length === 0) {
+                    delete rooms[roomCode];
+                    console.log(`Room ${roomCode} deleted`);
+                }
             }
         }
+        console.log("User disconnected:", socket.id);
     });
 });
 
+// Start the server
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
