@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generate Room Code</title>
-    <link rel="stylesheet" href="style05.css">
+    <title>Create Room</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script defer src="script05.js"></script>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <h2>Generate Room Code</h2>
-        <button id="generateCodeButton">Generate Code</button>
-        <p class="room-code" id="roomCode">----</p>
+        <button id="generateBtn">Generate Code</button>
+        <h3 id="roomCodeDisplay">----</h3>
     </div>
-
-    <!-- Ensure the script order: Socket.IO first, then script05.js -->
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="script05.js"></script>
 </body>
 </html>
