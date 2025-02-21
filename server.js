@@ -1,51 +1,60 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
-
-// Serve static files (CSS, JS)
-app.use(express.static(__dirname));
-
-// Routes for each HTML page
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index01.html'));
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Allow all origins (change this for security)
+  },
 });
 
-app.get('/page2', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index02.html'));
-});
+const rooms = {}; // Store active rooms
 
-app.get('/page3', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index03.html'));
-});
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id);
 
-app.get('/page4', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index04.html'));
-});
+  // Handle creating a new room
+  socket.on("createRoom", (roomCode) => {
+    if (!rooms[roomCode]) {
+      rooms[roomCode] = { players: [socket.id] };
+      socket.join(roomCode);
+      console.log(`Room ${roomCode} created`);
+      socket.emit("roomCreated", roomCode);
+    } else {
+      socket.emit("error", "Room already exists");
+    }
+  });
 
-app.get('/page5', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index05.html'));
-});
+  // Handle joining an existing room
+  socket.on("joinRoom", (roomCode) => {
+    if (rooms[roomCode] && rooms[roomCode].players.length < 2) {
+      rooms[roomCode].players.push(socket.id);
+      socket.join(roomCode);
+      console.log(`User ${socket.id} joined room ${roomCode}`);
+      io.to(roomCode).emit("startGame", roomCode);
+    } else {
+      socket.emit("error", "Room is full or does not exist");
+    }
+  });
 
-app.get('/page6', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index06.html'));
-});
+  socket.on("makeMove", ({ roomCode, boardState }) => {
+    socket.to(roomCode).emit("updateBoard", boardState);
+  });
 
-// Socket.IO for real-time functionality (if needed)
-io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
-
-  socket.on('disconnect', () => {
-    console.log('A user disconnected:', socket.id);
+  socket.on("disconnect", () => {
+    console.log(`User ${socket.id} disconnected`);
+    for (let roomCode in rooms) {
+      rooms[roomCode].players = rooms[roomCode].players.filter(
+        (id) => id !== socket.id
+      );
+      if (rooms[roomCode].players.length === 0) {
+        delete rooms[roomCode];
+      }
+    }
   });
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
