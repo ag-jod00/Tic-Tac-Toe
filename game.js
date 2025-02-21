@@ -1,16 +1,14 @@
 const socket = io();
-let playerSymbol = "X"; // Default
-let roomId = localStorage.getItem("roomId"); // Store room ID
+const cells = document.querySelectorAll(".cell");
 
-// Handle move clicks
-document.querySelectorAll(".cell").forEach(cell => {
+cells.forEach((cell) => {
     cell.addEventListener("click", () => {
-        let index = cell.getAttribute("data-index");
-        socket.emit("makeMove", { roomId, index, symbol: playerSymbol });
+        socket.emit("makeMove", { index: cell.dataset.index, symbol: "X" });
     });
 });
 
-// Update board on move
-socket.on("updateBoard", ({ index, symbol }) => {
-    document.querySelector(`.cell[data-index='${index}']`).innerText = symbol;
+socket.on("updateBoard", (board) => {
+    board.forEach((mark, index) => {
+        cells[index].innerText = mark;
+    });
 });
