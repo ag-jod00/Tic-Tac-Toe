@@ -3,17 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Mode</title>
-    <link rel="stylesheet" href="style01.css">
+    <title>Tic-Tac-Toe</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script defer src="script01.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to <br> Tic-Tac-Toe</h1>
-        <p>Select Game Mode</p>
-        <div class="buttons">
-            <a href="singleplayer.html" class="btn single">Single Player</a>
-            <a href="index02.html" class="btn multi">Multiplayer</a>
-        </div>
-    </div>
+    <h1>Welcome to Tic-Tac-Toe</h1>
+    <button id="createRoom">Create Room</button>
+    <input type="text" id="roomCode" placeholder="Enter Room Code">
+    <button id="joinRoom">Join Room</button>
 </body>
 </html>
