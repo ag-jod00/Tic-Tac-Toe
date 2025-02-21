@@ -6,13 +6,17 @@
     <title>Create Room</title>
     <script src="/socket.io/socket.io.js"></script>
     <script defer src="script05.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; background: #f4c842; }
+        .container { margin-top: 100px; padding: 20px; background: white; border-radius: 10px; display: inline-block; }
+        button { padding: 10px 20px; font-size: 18px; cursor: pointer; }
+    </style>
 </head>
 <body>
     <div class="container">
         <h2>Generate Room Code</h2>
-        <button id="generateBtn">Generate Code</button>
-        <h3 id="roomCodeDisplay">----</h3>
+        <button id="createRoomBtn">Generate Code</button>
+        <p id="roomCode"></p>
     </div>
 </body>
 </html>
